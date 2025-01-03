@@ -1,6 +1,5 @@
 //import assignments.ex2.Ex2Utils;
 //import assignments.ex2.Sheet;
-
 import java.io.IOException;
 // Add your documentation below:
 
@@ -9,6 +8,7 @@ public class Ex2Sheet implements Sheet {
     // Add your code here
 
     // ///////////////////
+
     public Ex2Sheet(int x, int y) {
         table = new SCell[x][y];
         for(int i=0;i<x;i=i+1) {
@@ -18,6 +18,7 @@ public class Ex2Sheet implements Sheet {
         }
         eval();
     }
+
     public Ex2Sheet() {
         this(Ex2Utils.WIDTH, Ex2Utils.HEIGHT);
     }

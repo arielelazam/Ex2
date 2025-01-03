@@ -1,5 +1,4 @@
 // Add your documentation below:
-
 public class SCell implements Cell {
     private String line;
     private int type;
@@ -23,7 +22,6 @@ public class SCell implements Cell {
     public boolean parseForm(String form){
         form = form.trim();
 
-        //*
         if(isNumber(form) || isValCell(form)) return true;
         // if(isNumber(form)) return true;
         //if(isValCell(form)) return true;
@@ -189,14 +187,14 @@ public class SCell implements Cell {
         // ///////////////////
     }
 
-    //@Override
+
     @Override
     public String toString() {
         return getData();
     }
 
     @Override
-public void setData(String s) {
+    public void setData(String s) {
         // Add your code here
         line = s;
         /////////////////////
@@ -222,3 +220,6 @@ public void setData(String s) {
 
     }
 }
+
+
+
