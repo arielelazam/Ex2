@@ -6,7 +6,8 @@ import java.io.IOException;
 public class Ex2Sheet implements Sheet {
     private Cell[][] table;
     // Add your code here
-
+    int height;
+    int width;
     // ///////////////////
 
     public Ex2Sheet(int x, int y) {
@@ -49,6 +50,7 @@ public class Ex2Sheet implements Sheet {
         return ans;
     }
 
+
     @Override
     public int width() {
         return table.length;
@@ -57,6 +59,7 @@ public class Ex2Sheet implements Sheet {
     public int height() {
         return table[0].length;
     }
+
     @Override
     public void set(int x, int y, String s) {
         Cell c = new SCell(s);

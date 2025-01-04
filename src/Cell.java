@@ -12,6 +12,7 @@ public interface Cell {
      */
     String getData();
 
+
 /** Changes the underline string of this cell
  *  */
     void setData(String s);

@@ -1,6 +1,7 @@
 // Add your documentation below:
 public class SCell implements Cell {
     private String line;
+    private String originalLine;
     private int type;
     // Add your code here
     public  boolean isForm(String text) {
@@ -160,22 +161,19 @@ public class SCell implements Cell {
             default: throw new IllegalArgumentException("INVALID OPERATOR");
         }
     }
-    private boolean isFullyParenthesized(String form) {
-        if (form.charAt(0) != '(' || form.charAt(form.length() - 1) != ')') {
-            return false;
-        }
+    public int checkType(String s){
+        if(isNumber(s)) return Ex2Utils.NUMBER;
+        if(isText(s)) return Ex2Utils.TEXT;
+        if(isForm(s)) return Ex2Utils.FORM;
+        return Ex2Utils.ERR_FORM_FORMAT;
 
-        int balance = 0;
-        for (int i = 0; i < form.length(); i++) {
-            if (form.charAt(i) == '(') balance++;
-            if (form.charAt(i) == ')') balance--;
-            if (balance <= 0 && i != form.length() - 1) return false;
-        }
-        return balance == 0;
     }
 
     public SCell(String s) {
         // Add your code here
+        this.type = checkType(s);
+        this.line = s;
+        this.originalLine = s;
         setData(s);
     }
 
@@ -192,21 +190,52 @@ public class SCell implements Cell {
     public String toString() {
         return getData();
     }
-
     @Override
     public void setData(String s) {
-        // Add your code here
-        line = s;
-        /////////////////////
+        if (s == null || s.trim().isEmpty()) {
+            this.line = Ex2Utils.EMPTY_CELL;
+            this.type = Ex2Utils.TEXT;
+            return;
+        }
+
+        this.line = s.trim();
+        this.type = checkType(this.line);
+
+        switch (this.type){
+            case Ex2Utils.FORM:
+                try {
+                    double result = computeForm(this.line);
+                    this.line = String.format("%.1f", result);
+                } catch (IllegalArgumentException e) {
+                    this.type = Ex2Utils.ERR_FORM_FORMAT;
+                    this.line = Ex2Utils.ERR_FORM;
+                } break;
+            case Ex2Utils.NUMBER:
+                try {
+                    double number = Double.parseDouble(this.line);
+                    this.line = String.format("%.1f", number);
+                } catch (NumberFormatException e) {
+                    this.type = Ex2Utils.ERR;
+                    this.line = Ex2Utils.ERR_FORM;
+                } break;
+            case Ex2Utils.TEXT:
+                this.line = s;
+                this.type = Ex2Utils.TEXT; break;
+            default:
+                this.type = Ex2Utils.ERR;
+                this.line = Ex2Utils.ERR_FORM;
+        }
+
     }
+
     @Override
     public String getData() {
-        return line;
+        return this.line;
     }
 
     @Override
     public int getType() {
-        return type;
+        return this.type;
     }
 
     @Override
@@ -220,6 +249,8 @@ public class SCell implements Cell {
 
     }
 }
+
+
 
 
 

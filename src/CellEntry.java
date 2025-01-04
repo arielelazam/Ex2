@@ -36,8 +36,6 @@ public class CellEntry implements Index2D {
         return y;
     }
 }
-
-
 /*
 
 public class CellEntry  implements Index2D {
