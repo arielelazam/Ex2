@@ -38,5 +38,5 @@ public interface Cell {
      * Changes the order of this Cell
      * @param t
      */
-    public void setOrder(int t);
+    public boolean setOrder(int t);
 }
