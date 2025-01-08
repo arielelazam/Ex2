@@ -13,8 +13,8 @@ public interface Cell {
     String getData();
 
 
-/** Changes the underline string of this cell
- *  */
+    /** Changes the underline string of this cell
+     *  */
     void setData(String s);
 
 
@@ -38,5 +38,5 @@ public interface Cell {
      * Changes the order of this Cell
      * @param t
      */
-    public boolean setOrder(int t);
+    public void setOrder(int t);
 }
