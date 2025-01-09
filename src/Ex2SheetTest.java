@@ -162,4 +162,5 @@ public class Ex2SheetTest {
         assertEquals(10.0, sheet.applyUnOp(10, '+'));
         assertEquals(-10.0, sheet.applyUnOp(10, '-'));
     }
+
 }

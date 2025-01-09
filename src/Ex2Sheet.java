@@ -110,7 +110,6 @@ public class Ex2Sheet implements Sheet {
         myWriter.close();
     }
 
-
     @Override
     public String eval(int x, int y) {
         Cell cell = table[x][y];
@@ -272,7 +271,6 @@ public class Ex2Sheet implements Sheet {
         }
     }
 
-    ///////////////////////////
     public PositionFinder interpretPos(String s) {
         if (s.isEmpty()) {
             return new PositionFinder(-1, -1);
@@ -298,7 +296,6 @@ public class Ex2Sheet implements Sheet {
         return new PositionFinder(column, row);
     }
 
-
     double performOperation(double num1, double num2, char operator) {
         switch (operator) {
             case '+':
@@ -322,7 +319,6 @@ public class Ex2Sheet implements Sheet {
         }
     }
 
-
     public int parseInt(String s) {
         try {
             return Integer.parseInt(s);
@@ -330,6 +326,7 @@ public class Ex2Sheet implements Sheet {
             return -1;
         }
     }
+
     boolean containsCoordinate(List<PositionFinder> coordinates, PositionFinder coordinate) {
         for (PositionFinder currentCoord : coordinates) {
             if (coordinate.x == currentCoord.x && coordinate.y == currentCoord.y) {
@@ -350,63 +347,3 @@ public class Ex2Sheet implements Sheet {
         }
     }
 }
-
-
-/*
-    double calculateByUnOp(double n, char op) {
-        return switch (op) {
-            case '+' -> n;
-            case '-' -> -n;
-            default -> Integer.MIN_VALUE;
-        };
-    }
-
- */
-
-    /*
-    boolean containsCoord(List<PositionFinder> coords, PositionFinder coord) {
-        for (int i = 0; i < coords.size(); i++) {
-            PositionFinder coordCrnt = coords.get(i);
-            if (coord.x == coordCrnt.x && coord.y == coordCrnt.y)
-                return true;
-        }
-
-        return false;
-    }
-
-     */
-
-/*
-   double performUnaryOperation(double number, char operator) {
-        switch (operator) {
-            case '+':
-                return number;
-            case '-':
-                return -number;
-            default:
-                return Double.NEGATIVE_INFINITY;
-        }
-    }
- */
-
-/*
-    PositionFinder parsePosition(String s) {
-        if (s.isEmpty())
-            return new PositionFinder(-1, -1);
-
-        char xChr = s.charAt(0);
-
-        int x = Character.isUpperCase(xChr) ? xChr - 'A'
-                : Character.isLowerCase(xChr) ? xChr - 'a'
-                : -1;
-        if (x == -1)
-            return new PositionFinder(-1, -1);
-
-        int y = parseInt(s.substring(1));
-        if (y == -1)
-            return new PositionFinder(-1, -1);
-
-        return new PositionFinder(x, y);
-    }
-
- */
