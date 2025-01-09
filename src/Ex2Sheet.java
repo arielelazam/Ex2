@@ -1,19 +1,18 @@
-//import assignments.ex2.Ex2Utils;
-//import assignments.ex2.Sheet;
+import java.io.FileWriter;
 import java.io.IOException;
-// Add your documentation below:
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class Ex2Sheet implements Sheet {
     private Cell[][] table;
-    // Add your code here
-    int height;
-    int width;
-    // ///////////////////
 
     public Ex2Sheet(int x, int y) {
         table = new SCell[x][y];
-        for(int i=0;i<x;i=i+1) {
-            for(int j=0;j<y;j=j+1) {
+        for (int i = 0; i < x; i = i + 1) {
+            for (int j = 0; j < y; j = j + 1) {
                 table[i][j] = new SCell("");
             }
         }
@@ -26,14 +25,7 @@ public class Ex2Sheet implements Sheet {
 
     @Override
     public String value(int x, int y) {
-        String ans = Ex2Utils.EMPTY_CELL;
-        // Add your code here
-
-        Cell c = get(x,y);
-        if(c!=null) {ans = c.toString();}
-
-        /////////////////////
-        return ans;
+        return eval(x, y);
     }
 
     @Override
@@ -42,19 +34,17 @@ public class Ex2Sheet implements Sheet {
     }
 
     @Override
-    public Cell get(String cords) {
-        Cell ans = null;
-        // Add your code here
+    public Cell get(String posses) {
+        PositionFinder pos = interpretPos(posses);
 
-        /////////////////////
-        return ans;
+        return table[pos.x][pos.y];
     }
-
 
     @Override
     public int width() {
         return table.length;
     }
+
     @Override
     public int height() {
         return table[0].length;
@@ -64,57 +54,359 @@ public class Ex2Sheet implements Sheet {
     public void set(int x, int y, String s) {
         Cell c = new SCell(s);
         table[x][y] = c;
-        // Add your code here
-
-        /////////////////////
     }
+
     @Override
     public void eval() {
-        int[][] dd = depth();
-        // Add your code here
-
-        // ///////////////////
     }
 
     @Override
-    public boolean isIn(int xx, int yy) {
-        boolean ans = xx>=0 && yy>=0;
-        // Add your code here
-
-        /////////////////////
-        return ans;
+    public boolean isIn(int x, int y) {
+        return x >= 0 && x < width() && y >= 0 && y < height();
     }
 
     @Override
     public int[][] depth() {
         int[][] ans = new int[width()][height()];
-        // Add your code here
 
-        // ///////////////////
         return ans;
     }
-
     @Override
     public void load(String fileName) throws IOException {
-        // Add your code here
+        List<String> loadStr = Files.readAllLines(Paths.get(fileName));
 
-        /////////////////////
+        for (int x = 0; x < width(); x++) {
+            for (int y = 0; y < height(); y++) {
+                table[x][y].setData("");
+            }
+        }
+
+        for (int index = 1; index < loadStr.size(); index++) {
+            String[] parsedData = loadStr.get(index).split(",");
+            int xCoord = Integer.parseInt(parsedData[0]);
+            int yCoord = Integer.parseInt(parsedData[1]);
+
+            table[xCoord][yCoord].setData(parsedData[2]);
+        }
+
     }
 
     @Override
     public void save(String fileName) throws IOException {
-        // Add your code here
+        StringBuilder first_line = new StringBuilder("I2CS ArielU: SpreadSheet (Ex2) assignment");
 
-        /////////////////////
+        for (int y = 0; y < height(); y++) {
+            for (int x = 0; x < width(); x++) {
+                SCell cell = (SCell)table[x][y];
+                String line = cell.getData();
+                if (!Objects.equals(line, "")) {
+                    first_line.append(x).append(",").append(y).append(",").append(line).append("\n");
+                }
+            }
+        }
+
+        FileWriter myWriter = new FileWriter(fileName);
+        myWriter.write(first_line.toString());
+        myWriter.close();
     }
+
 
     @Override
     public String eval(int x, int y) {
-        String ans = null;
-        if(get(x,y)!=null) {ans = get(x,y).toString();}
-        // Add your code here
+        Cell cell = table[x][y];
+        String line = cell.getData();
 
-        /////////////////////
-        return ans;
+        String computable =computeForm(line, List.of(new PositionFinder(x, y)));
+
+        if (Objects.equals(computable, Ex2Utils.ERR_FORM)) cell.setType(Ex2Utils.ERR_FORM_FORMAT);
+        else if (Objects.equals(computable, Ex2Utils.ERR_CYCLE)) cell.setType(Ex2Utils.ERR_CYCLE_FORM);
+        else if (parseDouble(computable) != -1 && !line.startsWith("=")) cell.setType(Ex2Utils.NUMBER);
+        else if (parseDouble(computable) != -1) cell.setType(Ex2Utils.FORM);
+        else cell.setType(Ex2Utils.TEXT);
+
+        return computable;
+    }
+
+    String computeForm(String line, List<PositionFinder> positions) {
+        if (line.startsWith("=")) {
+            String str = line.substring(1).replaceAll(" ", "");
+
+            return computeFormHelper  (str, positions);
+        }
+
+        double num = parseDouble(line);
+        if (num != -1) {
+            return String.valueOf(num);
+        }
+
+        return line;
+    }
+
+    String computeFormHelper(String form, List<PositionFinder> positions) {
+        while (form.startsWith("(") && form.endsWith(")"))
+            form = form.substring(1, form.length() - 1);
+
+        int signIndex = indOfMainOp(form);
+
+        if (signIndex == -1) {
+            double result = parseDouble(form);
+            if (result != -1) {
+                return String.valueOf(result);
+            }
+
+            PositionFinder position = interpretPos(form);
+            if (position.x != -1) {
+                if (containsCoordinate(positions, position))
+                    return Ex2Utils.ERR_CYCLE;
+
+                if (!isIn(position.x, position.y))
+                    return Ex2Utils.ERR_FORM;
+
+                Cell cell = table[position.x][position.y];
+                String cellExpr = cell.getData();
+
+                List<PositionFinder> positionsCopy = new ArrayList<PositionFinder>(positions);
+                positionsCopy.add(position);
+
+                return computeForm(cellExpr, positionsCopy);
+            }
+
+            return Ex2Utils.ERR_FORM;
+        }
+
+        String leftPart = form.substring(0, signIndex);
+        String rightPart = form.substring(signIndex + 1);
+        char op = form.charAt(signIndex);
+
+        if (leftPart != "") {
+            String leftStr = computeFormHelper(leftPart, positions);
+            String rightStr = computeFormHelper(rightPart, positions);
+
+            if (Objects.equals(leftStr, Ex2Utils.ERR_FORM) || Objects.equals(rightStr, Ex2Utils.ERR_FORM))
+                return Ex2Utils.ERR_FORM;
+
+            if (Objects.equals(leftStr, Ex2Utils.ERR_CYCLE) || Objects.equals(rightStr, Ex2Utils.ERR_CYCLE))
+                return Ex2Utils.ERR_CYCLE;
+
+            double leftNum = Double.parseDouble(leftStr);
+            double rightNum = Double.parseDouble(rightStr);
+
+            double result = performOperation(leftNum, rightNum, op);
+            return String.valueOf(result);
+        }
+
+        if (op == '+' || op == '-') {
+            String num1Str = computeFormHelper(rightPart, positions);
+
+            if (parseDouble(num1Str) == -1)
+                return num1Str;
+
+            double num1 = parseDouble(num1Str);
+
+            double res = applyUnOp(num1, op);
+            return String.valueOf(res);
+        }
+
+        return Ex2Utils.ERR_FORM;
+    }
+
+   public int indOfMainOp(String str) {
+        boolean found = false;
+
+        int barDepth = Integer.MAX_VALUE;
+        int opVal = Integer.MAX_VALUE;
+        int opIndex = Integer.MAX_VALUE;
+
+        int corDepth = 0;
+        for (int ic = 0; ic < str.length(); ic++) {
+            char ch = str.charAt(ic);
+
+            if (ch == '(') {
+                corDepth++;
+                continue;
+            }
+            if (ch == ')') {
+                corDepth--;
+                continue;
+            }
+
+            int oc = signType(ch);
+            if (oc == -1)
+                continue;
+
+            if (isOp(ch) && isOpBetter(barDepth, opVal, opIndex, corDepth, oc, ic)) {
+                found = true;
+                barDepth = corDepth;
+                opVal = oc;
+                opIndex = ic;
+            }
+        }
+
+        if (!found)
+            return -1;
+
+        return opIndex;
+
+    }
+
+    boolean isOp(char ch) {
+        return ch == '+' || ch == '-' || ch == '*' || ch == '/';
+    }
+
+    boolean isOpBetter(int DD, int OD, int OB, int DC, int CC, int BD) {
+        return DD > DC || DD == DC && (OD > CC || OD == CC && OB > BD);
+    }
+
+   public int signType(char op) {
+        switch (op) {
+            case '+':
+                return 0;
+            case '-':
+                return 0;
+            case '*':
+                return 1;
+            case '/':
+                return 1;
+            default:
+                return -1;
+        }
+    }
+
+    ///////////////////////////
+    public PositionFinder interpretPos(String s) {
+        if (s.isEmpty()) {
+            return new PositionFinder(-1, -1);
+        }
+
+        char columnChar = s.charAt(0);
+        int column = -1;
+        if (Character.isUpperCase(columnChar)) {
+            column = columnChar - 'A';
+        } else if (Character.isLowerCase(columnChar)) {
+            column = columnChar - 'a';
+        }
+
+        if (column == -1) {
+            return new PositionFinder(-1, -1);
+        }
+
+        int row = parseInt(s.substring(1));
+        if (row == -1) {
+            return new PositionFinder(-1, -1);
+        }
+
+        return new PositionFinder(column, row);
+    }
+
+
+    double performOperation(double num1, double num2, char operator) {
+        switch (operator) {
+            case '+':
+                return num1 + num2;
+            case '-':
+                return num1 - num2;
+            case '*':
+                return num1 * num2;
+            case '/':
+                return num1 / num2;
+            default:
+                return Double.NEGATIVE_INFINITY;
+        }
+    }
+
+    double parseDouble(String s) {
+        try {
+            return Double.parseDouble(s);
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+
+    public int parseInt(String s) {
+        try {
+            return Integer.parseInt(s);
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+    boolean containsCoordinate(List<PositionFinder> coordinates, PositionFinder coordinate) {
+        for (PositionFinder currentCoord : coordinates) {
+            if (coordinate.x == currentCoord.x && coordinate.y == currentCoord.y) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    double applyUnOp(double value, char operator) {
+        switch (operator) {
+            case '+':
+                return value;
+            case '-':
+                return -value;
+            default:
+                return Double.NEGATIVE_INFINITY;
+        }
     }
 }
+
+
+/*
+    double calculateByUnOp(double n, char op) {
+        return switch (op) {
+            case '+' -> n;
+            case '-' -> -n;
+            default -> Integer.MIN_VALUE;
+        };
+    }
+
+ */
+
+    /*
+    boolean containsCoord(List<PositionFinder> coords, PositionFinder coord) {
+        for (int i = 0; i < coords.size(); i++) {
+            PositionFinder coordCrnt = coords.get(i);
+            if (coord.x == coordCrnt.x && coord.y == coordCrnt.y)
+                return true;
+        }
+
+        return false;
+    }
+
+     */
+
+/*
+   double performUnaryOperation(double number, char operator) {
+        switch (operator) {
+            case '+':
+                return number;
+            case '-':
+                return -number;
+            default:
+                return Double.NEGATIVE_INFINITY;
+        }
+    }
+ */
+
+/*
+    PositionFinder parsePosition(String s) {
+        if (s.isEmpty())
+            return new PositionFinder(-1, -1);
+
+        char xChr = s.charAt(0);
+
+        int x = Character.isUpperCase(xChr) ? xChr - 'A'
+                : Character.isLowerCase(xChr) ? xChr - 'a'
+                : -1;
+        if (x == -1)
+            return new PositionFinder(-1, -1);
+
+        int y = parseInt(s.substring(1));
+        if (y == -1)
+            return new PositionFinder(-1, -1);
+
+        return new PositionFinder(x, y);
+    }
+
+ */
