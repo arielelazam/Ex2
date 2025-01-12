@@ -9,17 +9,6 @@ import java.nio.file.Paths;
 public class Ex2Sheet implements Sheet {
     private Cell[][] table;
 
-    // Inner class PositionFinder
-    private static class PositionFinder {
-        public int x;
-        public int y;
-
-        public PositionFinder(int x, int y) {
-            this.x = x;
-            this.y = y;
-        }
-    }
-
     public Ex2Sheet(int x, int y) {
         table = new SCell[x][y];
         for (int i = 0; i < x; i = i + 1) {
@@ -105,27 +94,6 @@ public class Ex2Sheet implements Sheet {
         writeToFile(fileName, content);
     }
 
-    private StringBuilder generateContent() {
-        StringBuilder content = new StringBuilder();
-
-        for (int y = 0; y < height(); y++) {
-            for (int x = 0; x < width(); x++) {
-                SCell cell = (SCell)table[x][y];
-                String line = cell.getData();
-                if (!Objects.equals(line, "")) {
-                    content.append(x).append(",").append(y).append(",").append(line).append("\n");
-                }
-            }
-        }
-
-        return content;
-    }
-
-    private void writeToFile(String fileName, StringBuilder content) throws IOException {
-        FileWriter myWriter = new FileWriter(fileName);
-        myWriter.write(content.toString());
-        myWriter.close();
-    }
 
     @Override
     public String eval(int x, int y) {
@@ -139,19 +107,6 @@ public class Ex2Sheet implements Sheet {
         return computable;
     }
 
-    private void setTypeBasedOnComputable(Cell cell, String computable, String line) {
-        if (Objects.equals(computable, Ex2Utils.ERR_FORM)) {
-            cell.setType(Ex2Utils.ERR_FORM_FORMAT);
-        } else if (Objects.equals(computable, Ex2Utils.ERR_CYCLE)) {
-            cell.setType(Ex2Utils.ERR_CYCLE_FORM);
-        } else if (parseDouble(computable) != -1 && !line.startsWith("=")) {
-            cell.setType(Ex2Utils.NUMBER);
-        } else if (parseDouble(computable) != -1) {
-            cell.setType(Ex2Utils.FORM);
-        } else {
-            cell.setType(Ex2Utils.TEXT);
-        }
-    }
 
 
     String computeForm(String form, List<PositionFinder> positions) {
@@ -182,6 +137,36 @@ public class Ex2Sheet implements Sheet {
         }
 
         return evaluateComplexExpression(form, positions, mainOpIndex);
+    }
+
+    private StringBuilder generateContent() {
+        StringBuilder content = new StringBuilder();
+
+        for (int y = 0; y < height(); y++) {
+            for (int x = 0; x < width(); x++) {
+                SCell cell = (SCell)table[x][y];
+                String line = cell.getData();
+                if (!Objects.equals(line, "")) {
+                    content.append(x).append(",").append(y).append(",").append(line).append("\n");
+                }
+            }
+        }
+
+        return content;
+    }
+
+    private void setTypeBasedOnComputable(Cell cell, String computable, String line) {
+        if (Objects.equals(computable, Ex2Utils.ERR_FORM)) {
+            cell.setType(Ex2Utils.ERR_FORM_FORMAT);
+        } else if (Objects.equals(computable, Ex2Utils.ERR_CYCLE)) {
+            cell.setType(Ex2Utils.ERR_CYCLE_FORM);
+        } else if (parseDouble(computable) != -1 && !line.startsWith("=")) {
+            cell.setType(Ex2Utils.NUMBER);
+        } else if (parseDouble(computable) != -1) {
+            cell.setType(Ex2Utils.FORM);
+        } else {
+            cell.setType(Ex2Utils.TEXT);
+        }
     }
 
     private String stripOuterParentheses(String form) {
@@ -338,8 +323,6 @@ public class Ex2Sheet implements Sheet {
                                         bonusA > bonusB)));
     }
 
-
-
     public int signType(char op) {
         switch (op) {
             case '+':
@@ -450,6 +433,20 @@ public class Ex2Sheet implements Sheet {
             int yCoord = Integer.parseInt(parsedData[1]);
 
             table[xCoord][yCoord].setData(parsedData[2]);
+        }
+    }
+    private void writeToFile(String fileName, StringBuilder content) throws IOException {
+        FileWriter myWriter = new FileWriter(fileName);
+        myWriter.write(content.toString());
+        myWriter.close();
+    }
+    private static class PositionFinder {
+        public int x;
+        public int y;
+
+        public PositionFinder(int x, int y) {
+            this.x = x;
+            this.y = y;
         }
     }
 }
