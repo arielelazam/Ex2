@@ -30,8 +30,6 @@ public class Ex2Sheet implements Sheet {
         eval();
     }
 
-    // ... [כל שאר הקוד נשאר זהה, רק PositionFinder עבר להיות בפנים] ...
-
     public Ex2Sheet() {
         this(Ex2Utils.WIDTH, Ex2Utils.HEIGHT);
     }
@@ -155,13 +153,6 @@ public class Ex2Sheet implements Sheet {
         }
     }
 
-    private double parseDoubleForEval(String value) {
-        try {
-            return Double.parseDouble(value);
-        } catch (NumberFormatException e) {
-            return -1;
-        }
-    }
 
     String computeForm(String form, List<PositionFinder> positions) {
         if (form.startsWith("=")) {
@@ -322,7 +313,7 @@ public class Ex2Sheet implements Sheet {
             int oc = signType(ch);
             if (oc == -1) continue;
 
-            if (isOp(ch) && isOpBetter(barDepth, opVal, opIndex, corDepth, oc, i)) {
+            if (isOp(ch) && isPreferredCandidate(barDepth, opVal, opIndex, corDepth, oc, i)) {
                 found = true;
                 barDepth = corDepth;
                 opVal = oc;
@@ -339,9 +330,15 @@ public class Ex2Sheet implements Sheet {
         return ch == '+' || ch == '-' || ch == '*' || ch == '/';
     }
 
-    boolean isOpBetter(int DD, int OD, int OB, int DC, int CC, int BD) {
-        return DD > DC || DD == DC && (OD > CC || OD == CC && OB > BD);
+    boolean isPreferredCandidate(int domA, int compA, int bonusA, int domB, int compB, int bonusB) {
+        return domA > domB ||
+                (domA == domB &&
+                        (compA > compB ||
+                                (compA == compB &&
+                                        bonusA > bonusB)));
     }
+
+
 
     public int signType(char op) {
         switch (op) {
