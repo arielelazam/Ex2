@@ -9,6 +9,17 @@ import java.nio.file.Paths;
 public class Ex2Sheet implements Sheet {
     private Cell[][] table;
 
+    // Inner class PositionFinder
+    private static class PositionFinder {
+        public int x;
+        public int y;
+
+        public PositionFinder(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
     public Ex2Sheet(int x, int y) {
         table = new SCell[x][y];
         for (int i = 0; i < x; i = i + 1) {
@@ -18,6 +29,8 @@ public class Ex2Sheet implements Sheet {
         }
         eval();
     }
+
+    // ... [כל שאר הקוד נשאר זהה, רק PositionFinder עבר להיות בפנים] ...
 
     public Ex2Sheet() {
         this(Ex2Utils.WIDTH, Ex2Utils.HEIGHT);
@@ -36,7 +49,6 @@ public class Ex2Sheet implements Sheet {
     @Override
     public Cell get(String posses) {
         PositionFinder pos = interpretPos(posses);
-
         return table[pos.x][pos.y];
     }
 
@@ -60,53 +72,60 @@ public class Ex2Sheet implements Sheet {
     public void eval() {
     }
 
-    @Override
     public boolean isIn(int x, int y) {
-        return x >= 0 && x < width() && y >= 0 && y < height();
+        if (x < 0) {
+            return false;
+        }
+        if (x >= width()) {
+            return false;
+        }
+        if (y < 0) {
+            return false;
+        }
+        if (y >= height()) {
+            return false;
+        }
+        return true;
     }
 
     @Override
     public int[][] depth() {
         int[][] ans = new int[width()][height()];
-
         return ans;
     }
+
     @Override
     public void load(String fileName) throws IOException {
-        List<String> loadStr = Files.readAllLines(Paths.get(fileName));
-
-        for (int x = 0; x < width(); x++) {
-            for (int y = 0; y < height(); y++) {
-                table[x][y].setData("");
-            }
-        }
-
-        for (int index = 1; index < loadStr.size(); index++) {
-            String[] parsedData = loadStr.get(index).split(",");
-            int xCoord = Integer.parseInt(parsedData[0]);
-            int yCoord = Integer.parseInt(parsedData[1]);
-
-            table[xCoord][yCoord].setData(parsedData[2]);
-        }
-
+        List<String> loadStr = readFile(fileName);
+        clearTableData();
+        loadTableData(loadStr);
     }
 
     @Override
     public void save(String fileName) throws IOException {
-        StringBuilder first_line = new StringBuilder("I2CS ArielU: SpreadSheet (Ex2) assignment");
+        StringBuilder content = generateContent();
+        writeToFile(fileName, content);
+    }
+
+    private StringBuilder generateContent() {
+        StringBuilder content = new StringBuilder();
 
         for (int y = 0; y < height(); y++) {
             for (int x = 0; x < width(); x++) {
                 SCell cell = (SCell)table[x][y];
                 String line = cell.getData();
                 if (!Objects.equals(line, "")) {
-                    first_line.append(x).append(",").append(y).append(",").append(line).append("\n");
+                    content.append(x).append(",").append(y).append(",").append(line).append("\n");
                 }
             }
         }
 
+        return content;
+    }
+
+    private void writeToFile(String fileName, StringBuilder content) throws IOException {
         FileWriter myWriter = new FileWriter(fileName);
-        myWriter.write(first_line.toString());
+        myWriter.write(content.toString());
         myWriter.close();
     }
 
@@ -115,101 +134,172 @@ public class Ex2Sheet implements Sheet {
         Cell cell = table[x][y];
         String line = cell.getData();
 
-        String computable =computeForm(line, List.of(new PositionFinder(x, y)));
+        String computable = computeForm(line, List.of(new PositionFinder(x, y)));
 
-        if (Objects.equals(computable, Ex2Utils.ERR_FORM)) cell.setType(Ex2Utils.ERR_FORM_FORMAT);
-        else if (Objects.equals(computable, Ex2Utils.ERR_CYCLE)) cell.setType(Ex2Utils.ERR_CYCLE_FORM);
-        else if (parseDouble(computable) != -1 && !line.startsWith("=")) cell.setType(Ex2Utils.NUMBER);
-        else if (parseDouble(computable) != -1) cell.setType(Ex2Utils.FORM);
-        else cell.setType(Ex2Utils.TEXT);
+        setTypeBasedOnComputable(cell, computable, line);
 
         return computable;
     }
 
-    String computeForm(String line, List<PositionFinder> positions) {
-        if (line.startsWith("=")) {
-            String str = line.substring(1).replaceAll(" ", "");
+    private void setTypeBasedOnComputable(Cell cell, String computable, String line) {
+        if (Objects.equals(computable, Ex2Utils.ERR_FORM)) {
+            cell.setType(Ex2Utils.ERR_FORM_FORMAT);
+        } else if (Objects.equals(computable, Ex2Utils.ERR_CYCLE)) {
+            cell.setType(Ex2Utils.ERR_CYCLE_FORM);
+        } else if (parseDouble(computable) != -1 && !line.startsWith("=")) {
+            cell.setType(Ex2Utils.NUMBER);
+        } else if (parseDouble(computable) != -1) {
+            cell.setType(Ex2Utils.FORM);
+        } else {
+            cell.setType(Ex2Utils.TEXT);
+        }
+    }
 
-            return computeFormHelper  (str, positions);
+    private double parseDoubleForEval(String value) {
+        try {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    String computeForm(String form, List<PositionFinder> positions) {
+        if (form.startsWith("=")) {
+            String cleanedForm = removeEqualsAndWhitespace(form);
+            return evaluateExpression(cleanedForm, positions);
         }
 
-        double num = parseDouble(line);
+        double num = tryParseDouble(form);
         if (num != -1) {
             return String.valueOf(num);
         }
 
-        return line;
+        return form;
     }
 
-    String computeFormHelper(String form, List<PositionFinder> positions) {
-        while (form.startsWith("(") && form.endsWith(")"))
-            form = form.substring(1, form.length() - 1);
+    private String removeEqualsAndWhitespace(String form) {
+        return form.substring(1).replaceAll(" ", "");
+    }
 
-        int signIndex = indOfMainOp(form);
+    private String evaluateExpression(String form, List<PositionFinder> positions) {
+        form = stripOuterParentheses(form);
 
-        if (signIndex == -1) {
-            double result = parseDouble(form);
-            if (result != -1) {
-                return String.valueOf(result);
-            }
+        int mainOpIndex = findMainOperatorIndex(form);
 
-            PositionFinder position = interpretPos(form);
-            if (position.x != -1) {
-                if (containsCoordinate(positions, position))
-                    return Ex2Utils.ERR_CYCLE;
-
-                if (!isIn(position.x, position.y))
-                    return Ex2Utils.ERR_FORM;
-
-                Cell cell = table[position.x][position.y];
-                String cellExpr = cell.getData();
-
-                List<PositionFinder> positionsCopy = new ArrayList<PositionFinder>(positions);
-                positionsCopy.add(position);
-
-                return computeForm(cellExpr, positionsCopy);
-            }
-
-            return Ex2Utils.ERR_FORM;
+        if (mainOpIndex == -1) {
+            return evaluateSimpleExpression(form, positions);
         }
 
-        String leftPart = form.substring(0, signIndex);
-        String rightPart = form.substring(signIndex + 1);
-        char op = form.charAt(signIndex);
+        return evaluateComplexExpression(form, positions, mainOpIndex);
+    }
 
-        if (leftPart != "") {
-            String leftStr = computeFormHelper(leftPart, positions);
-            String rightStr = computeFormHelper(rightPart, positions);
+    private String stripOuterParentheses(String form) {
+        while (form.startsWith("(") && form.endsWith(")")) {
+            form = form.substring(1, form.length() - 1);
+        }
+        return form;
+    }
 
-            if (Objects.equals(leftStr, Ex2Utils.ERR_FORM) || Objects.equals(rightStr, Ex2Utils.ERR_FORM))
-                return Ex2Utils.ERR_FORM;
+    private int findMainOperatorIndex(String form) {
+        return indOfMainOp(form);
+    }
 
-            if (Objects.equals(leftStr, Ex2Utils.ERR_CYCLE) || Objects.equals(rightStr, Ex2Utils.ERR_CYCLE))
-                return Ex2Utils.ERR_CYCLE;
-
-            double leftNum = Double.parseDouble(leftStr);
-            double rightNum = Double.parseDouble(rightStr);
-
-            double result = performOperation(leftNum, rightNum, op);
+    private String evaluateSimpleExpression(String form, List<PositionFinder> positions) {
+        double result = tryParseDouble(form);
+        if (result != -1) {
             return String.valueOf(result);
         }
 
-        if (op == '+' || op == '-') {
-            String num1Str = computeFormHelper(rightPart, positions);
-
-            if (parseDouble(num1Str) == -1)
-                return num1Str;
-
-            double num1 = parseDouble(num1Str);
-
-            double res = applyUnOp(num1, op);
-            return String.valueOf(res);
+        PositionFinder pos = interpretPosition(form);
+        if (pos.x != -1) {
+            return evaluateCellExpression(form, positions, pos);
         }
 
         return Ex2Utils.ERR_FORM;
     }
 
-   public int indOfMainOp(String str) {
+    private String evaluateCellExpression(String form, List<PositionFinder> positions, PositionFinder pos) {
+        if (containsCoordinate(positions, pos)) {
+            return Ex2Utils.ERR_CYCLE;
+        }
+
+        if (!isIn(pos.x, pos.y)) {
+            return Ex2Utils.ERR_FORM;
+        }
+
+        Cell cell = table[pos.x][pos.y];
+        String cellExpr = cell.getData();
+
+        List<PositionFinder> positionsCopy = new ArrayList<>(positions);
+        positionsCopy.add(pos);
+
+        return computeForm(cellExpr, positionsCopy);
+    }
+
+    private String evaluateComplexExpression(String form, List<PositionFinder> positions, int mainOpIndex) {
+        String leftPart = form.substring(0, mainOpIndex);
+        String rightPart = form.substring(mainOpIndex + 1);
+        char operator = form.charAt(mainOpIndex);
+
+        if (!leftPart.isEmpty()) {
+            return evaluateBinaryExpression(leftPart, rightPart, operator, positions);
+        }
+
+        if (operator == '+' || operator == '-') {
+            return evaluateUnaryExpression(rightPart, operator, positions);
+        }
+
+        return Ex2Utils.ERR_FORM;
+    }
+
+    private String evaluateBinaryExpression(String leftPart, String rightPart, char operator, List<PositionFinder> positions) {
+        String leftResult = evaluateExpression(leftPart, positions);
+        String rightResult = evaluateExpression(rightPart, positions);
+
+        if (Objects.equals(leftResult, Ex2Utils.ERR_FORM) || Objects.equals(rightResult, Ex2Utils.ERR_FORM)) {
+            return Ex2Utils.ERR_FORM;
+        }
+
+        if (Objects.equals(leftResult, Ex2Utils.ERR_CYCLE) || Objects.equals(rightResult, Ex2Utils.ERR_CYCLE)) {
+            return Ex2Utils.ERR_CYCLE;
+        }
+
+        double leftNum = Double.parseDouble(leftResult);
+        double rightNum = Double.parseDouble(rightResult);
+
+        double result = performOperation(leftNum, rightNum, operator);
+        return String.valueOf(result);
+    }
+
+    private String evaluateUnaryExpression(String rightPart, char operator, List<PositionFinder> positions) {
+        String resultStr = evaluateExpression(rightPart, positions);
+
+        if (tryParseDouble(resultStr) == -1) {
+            return resultStr;
+        }
+
+        double num = tryParseDouble(resultStr);
+        double result = applyUnaryOperator(num, operator);
+        return String.valueOf(result);
+    }
+
+    private double tryParseDouble(String value) {
+        try {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    private PositionFinder interpretPosition(String form) {
+        return interpretPos(form);
+    }
+
+    private double applyUnaryOperator(double num, char operator) {
+        return applyUnOp(num, operator);
+    }
+
+    public int indOfMainOp(String str) {
         boolean found = false;
 
         int barDepth = Integer.MAX_VALUE;
@@ -217,8 +307,8 @@ public class Ex2Sheet implements Sheet {
         int opIndex = Integer.MAX_VALUE;
 
         int corDepth = 0;
-        for (int ic = 0; ic < str.length(); ic++) {
-            char ch = str.charAt(ic);
+        for (int i = 0; i < str.length(); i++) {
+            char ch = str.charAt(i);
 
             if (ch == '(') {
                 corDepth++;
@@ -230,22 +320,19 @@ public class Ex2Sheet implements Sheet {
             }
 
             int oc = signType(ch);
-            if (oc == -1)
-                continue;
+            if (oc == -1) continue;
 
-            if (isOp(ch) && isOpBetter(barDepth, opVal, opIndex, corDepth, oc, ic)) {
+            if (isOp(ch) && isOpBetter(barDepth, opVal, opIndex, corDepth, oc, i)) {
                 found = true;
                 barDepth = corDepth;
                 opVal = oc;
-                opIndex = ic;
+                opIndex = i;
             }
         }
 
-        if (!found)
-            return -1;
+        if (!found) return -1;
 
         return opIndex;
-
     }
 
     boolean isOp(char ch) {
@@ -256,7 +343,7 @@ public class Ex2Sheet implements Sheet {
         return DD > DC || DD == DC && (OD > CC || OD == CC && OB > BD);
     }
 
-   public int signType(char op) {
+    public int signType(char op) {
         switch (op) {
             case '+':
                 return 0;
@@ -271,12 +358,12 @@ public class Ex2Sheet implements Sheet {
         }
     }
 
-    public PositionFinder interpretPos(String s) {
-        if (s.isEmpty()) {
+    public PositionFinder interpretPos(String str) {
+        if (str.isEmpty()) {
             return new PositionFinder(-1, -1);
         }
 
-        char columnChar = s.charAt(0);
+        char columnChar = str.charAt(0);
         int column = -1;
         if (Character.isUpperCase(columnChar)) {
             column = columnChar - 'A';
@@ -288,7 +375,7 @@ public class Ex2Sheet implements Sheet {
             return new PositionFinder(-1, -1);
         }
 
-        int row = parseInt(s.substring(1));
+        int row = parseInt(str.substring(1));
         if (row == -1) {
             return new PositionFinder(-1, -1);
         }
@@ -336,14 +423,36 @@ public class Ex2Sheet implements Sheet {
         return false;
     }
 
-    double applyUnOp(double value, char operator) {
-        switch (operator) {
+    double applyUnOp(double val, char op) {
+        switch (op) {
             case '+':
-                return value;
+                return val;
             case '-':
-                return -value;
+                return -val;
             default:
                 return Double.NEGATIVE_INFINITY;
+        }
+    }
+
+    private List<String> readFile(String fileName) throws IOException {
+        return Files.readAllLines(Paths.get(fileName));
+    }
+
+    private void clearTableData() {
+        for (int x = 0; x < width(); x++) {
+            for (int y = 0; y < height(); y++) {
+                table[x][y].setData("");
+            }
+        }
+    }
+
+    private void loadTableData(List<String> loadStr) {
+        for (int index = 1; index < loadStr.size(); index++) {
+            String[] parsedData = loadStr.get(index).split(",");
+            int xCoord = Integer.parseInt(parsedData[0]);
+            int yCoord = Integer.parseInt(parsedData[1]);
+
+            table[xCoord][yCoord].setData(parsedData[2]);
         }
     }
 }

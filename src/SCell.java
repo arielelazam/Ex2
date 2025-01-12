@@ -1,7 +1,7 @@
 public class SCell implements Cell {
     private String line;
     private int type;
-
+    
     public SCell(String s) {
         setData(s);
     }
@@ -42,3 +42,6 @@ public class SCell implements Cell {
     }
 
 }
+
+
+
