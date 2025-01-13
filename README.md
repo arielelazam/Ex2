@@ -29,3 +29,4 @@ Implements an interface that returns invalid values for X and Y and indicates if
 
 ### SCell
 Represents a single cell in the spreadsheet, storing values of different types (text, number, formula) and includes information about its type.
+![ללא שם](https://github.com/user-attachments/assets/02cbe73b-6ee3-44cf-956d-9a96092c40d7)
